@@ -1,0 +1,108 @@
+<html>
+<head>
+    <title>Linear Regression Tensorflow</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@0.14.2/dist/tf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.3/p5.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <script async src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+</head>
+<script>
+    let xs = [];
+    let ys = [];
+
+    let m, b;
+    let learningRate = 0;
+
+    function setup(){
+        createCanvas(displayWidth,400);
+
+        //Initialize scalar variable randomly
+        m = tf.variable(tf.scalar(random(1)));
+        b = tf.variable(tf.scalar(random(1)));
+
+    }
+
+    function mousePressed(){
+        if (mouseY > 20 && mouseY < height){
+            let x = map(mouseX,0,width,0,1);
+            let y = map(mouseY,0,height,1,0);
+            xs.push(x);
+            ys.push(y);
+        }
+    }
+
+    function draw(){
+        background(0);
+        stroke(255);
+        strokeWeight(4);
+        let optimizer = tf.train.sgd(learningRate);
+        if(xs.length > 0){
+            for(let i = 0; i < xs.length; i++){
+                let px = map(xs[i],0,1,0,width);
+                let py = map(ys[i],0,1,height,0);
+                point(px,py);
+            }
+
+            const tensor_y = tf.tensor1d(ys);
+            optimizer.minimize(()=> loss(predict(xs),tensor_y))
+
+            const line_x = [0,1];
+            const y_axis = tf.tidy(() => predict(line_x));
+            let line_y = y_axis.dataSync();
+
+            let x1 = map(line_x[0],0,1,0,width);
+            let x2 = map(line_x[1],0,1,0,width);
+            let y1 = map(line_y[0],0,1,height,0);
+            let y2 = map(line_y[1],0,1,height,0);
+
+            line(x1,y1,x2,y2);
+            document.getElementById("pred_val").innerHTML = y_axis.toString();
+
+            tf.dispose(tensor_y);
+            tf.dispose(y_axis);
+            tf.dispose(line_y);
+            tf.dispose(optimizer);
+            console.log("Memory : " + tf.memory().numTensors);
+        }
+    }
+
+    //Predictions = predicted y value
+    //Labels = actual y value
+    function loss(predictions, labels){
+        return predictions.sub(labels).square().mean();
+    }
+
+    function predict(x_axis){
+        const tensor_x = tf.tensor1d(x_axis);
+        // y = mx + b
+        const y_axis = tensor_x.mul(m).add(b);
+        return y_axis;
+    }
+
+    function updateLearning(rate){
+        learningRate = rate * 0.1;
+        document.getElementById("learn_rate").innerHTML = learningRate;
+    }
+</script>
+
+<main>
+    <div class="container">
+        <h5>Linear Regression</h5>
+        <div class="row">
+
+            <div class="s12 m4 s3">
+                <p>Learning rate : <span id="learn_rate">0</span></p>
+                <p>Predicted value : <span id="pred_val"></span></p>
+            </div>
+            <div class="s12 m4 s3">
+                <p class="range-field">
+                    <input type="range" min="0" max="10" onchange="updateLearning(this.value)" value="0"/>
+                </p>
+            </div>
+        </div>
+    </div>
+</main>
+
+</html>
